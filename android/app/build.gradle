@@ -54,6 +54,8 @@ react {
     autolinkLibrariesWithApp()
 }
 
+apply from: project(':react-native-config').projectDir.getPath() + "/dotenv.gradle"
+
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
  */
@@ -84,6 +86,9 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0"
+        manifestPlaceholders = [
+            GOOGLE_MAPS_API_KEY: project.env.get("GOOGLE_MAPS_API_KEY"),
+        ]
     }
     signingConfigs {
         debug {
@@ -107,6 +112,8 @@ android {
     }
 }
 
+apply from: file("../../node_modules/react-native-vector-icons/fonts.gradle")
+
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
@@ -116,4 +123,6 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    implementation "com.facebook.react:react-native"
 }

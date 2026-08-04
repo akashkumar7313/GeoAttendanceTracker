@@ -1,97 +1,153 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# Geolocation Tracking & Geofence-Based Attendance System
 
-# Getting Started
+A React Native (TypeScript) application that demonstrates **real-time GPS tracking**, a **circular geofence** around a fixed office location, and a **geofence-gated attendance check-in** system that works fully offline.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+## Features
 
-## Step 1: Start Metro
+- **Real-time location tracking** — continuous GPS watch with live latitude/longitude display, cleaned up automatically on unmount.
+- **Map integration** — `react-native-maps` shows the office marker, the 100 m geofence circle and the user's position; the camera follows the user.
+- **Geofence** — Haversine distance calculation, `Inside Geofence` / `Outside Geofence` status badge.
+- **Check-in** — button enabled only inside the geofence, duplicate check-ins per day are blocked, success message on save.
+- **Local storage** — attendance records persisted with `@react-native-async-storage/async-storage` (works offline, no backend).
+- **Attendance History screen** — records shown newest-first in cards with an empty state and clear-history option.
+- **Error handling** — permission denied/blocked (deep-links to app settings), GPS disabled (alert + open settings + retry), timeouts, signal loss and unknown errors.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## Tech Stack
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+| Technology | Purpose |
+| --- | --- |
+| React Native CLI (0.86) + TypeScript | App framework |
+| React Navigation (native-stack) | Navigation |
+| `react-native-maps` | Google Maps (Android) / Apple Maps (iOS) |
+| `react-native-geolocation-service` | GPS tracking |
+| `react-native-permissions` | Location permission flow |
+| `@react-native-async-storage/async-storage` | Local persistence |
+| `react-native-vector-icons` | Icons |
+| `react-native-safe-area-context` | Safe areas |
+| `react-native-config` | `.env` config (Maps API key) |
+
+## Prerequisites
+
+- Node.js ≥ 22
+- JDK 17+, Android Studio with Android SDK 36
+- Xcode 16+ (for iOS)
+- A Google Maps API key (Android). Create one in the [Google Cloud Console](https://console.cloud.google.com) with the **Maps SDK for Android** enabled, and restrict it to your app's package name `com.geoattendancetracker`.
+
+## Installation
 
 ```sh
-# Using npm
-npm start
+# 1. Install JS dependencies
+npm install
 
-# OR using Yarn
-yarn start
+# 2. Create the environment file from the template
+cp .env.example .env
 ```
 
-## Step 2: Build and run your app
+Edit `.env` and put your real Maps key:
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+```
+GOOGLE_MAPS_API_KEY=YOUR_GOOGLE_MAPS_API_KEY
 ```
 
-### iOS
+> The `.env` file is gitignored and must never be committed. Only `.env.example` (with a placeholder) is checked in.
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+## Android configuration (already done, reference)
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+- **Permissions** — `ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION` are declared in `android/app/src/main/AndroidManifest.xml`.
+- **Maps key** — `android/app/build.gradle` reads `GOOGLE_MAPS_API_KEY` from `.env` via `react-native-config` and injects it as a manifest placeholder referenced in `AndroidManifest.xml` (`${GOOGLE_MAPS_API_KEY}`). No secret is stored in the repo.
+- **Icons** — `react-native-vector-icons/fonts.gradle` is applied in `android/app/build.gradle` (fonts are bundled automatically).
 
-```sh
-bundle install
+## iOS configuration (already done, reference)
+
+- **Location usage string** — `NSLocationWhenInUseUsageDescription` is set in `ios/GeoAttendanceTracker/Info.plist`.
+- **Maps** — iOS uses the default Apple Maps provider, so no Google API key is needed on iOS. (See below if you want Google Maps on iOS too.)
+- **Icons / native modules** — installed via CocoaPods (`pod install`).
+
+### Optional: Google Maps provider on iOS
+
+1. Add `GoogleMaps` to the podfile and `pod install`.
+2. Provide the API key in `AppDelegate.swift`:
+
+```swift
+import GoogleMaps
+GMSServices.provideAPIKey(ProcessInfo.processInfo.environment["GOOGLE_MAPS_API_KEY"] ?? "")
 ```
 
-Then, and every time you update your native dependencies, run:
+3. Render the map with `provider={PROVIDER_GOOGLE}` in `src/components/AttendanceMap.tsx`.
+
+## Running the app
 
 ```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
+# iOS (after installing pods)
+cd ios && bundle exec pod install && cd ..
 npm run ios
 
-# OR using Yarn
-yarn ios
+# Android
+npm run android
+
+# Start only the Metro bundler
+npm start
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+### Useful scripts
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+```sh
+npm run lint     # ESLint
+npm test         # Jest unit tests
+npx tsc --noEmit # TypeScript type-check
+```
 
-## Step 3: Modify your app
+## Project structure
 
-Now that you have successfully run the app, let's make changes!
+```
+src/
+├── assets/                 # Static assets (placeholder)
+├── components/             # Reusable UI components
+│   ├── AttendanceCard.tsx      # Single history record card
+│   ├── AttendanceMap.tsx       # Map + geofence circle + markers
+│   ├── CheckInButton.tsx       # Primary check-in action
+│   ├── EmptyState.tsx          # Empty list placeholder
+│   ├── InfoCard.tsx            # Label/value card (lat, lng, distance)
+│   ├── MessageView.tsx         # Full-screen info/error state
+│   └── StatusBadge.tsx         # Inside/Outside geofence pill
+├── constants/
+│   └── index.ts            # Office location, radius, colors, keys
+├── hooks/
+│   ├── useAttendance.ts        # Check-in + history state
+│   └── useLocationTracking.ts  # Permission, GPS, watching lifecycle
+├── navigation/
+│   └── RootNavigator.tsx       # Stack navigator + types
+├── screens/
+│   ├── HomeScreen.tsx          # Tracking + map + check-in
+│   └── AttendanceHistoryScreen.tsx  # FlatList of records
+├── services/
+│   ├── location.service.ts     # getCurrentPosition / watchPosition
+│   ├── permission.service.ts   # Permission status, request, settings
+│   └── storage.service.ts      # AsyncStorage CRUD
+├── types/
+│   ├── index.ts                # Shared TypeScript types
+│   └── vector-icons.d.ts       # Icons module declaration
+└── utils/
+    ├── date.ts                 # Date/time formatting
+    └── geo.ts                  # Haversine + geofence helpers
+```
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+## How it works
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+1. **HomeScreen** mounts → `useLocationTracking` requests location permission (`react-native-permissions`), then starts a one-shot fix plus a `watchPosition` stream (`react-native-geolocation-service`).
+2. Every fix updates `location`, and `AttendanceMap` animates the camera to it. `utils/geo.ts` computes the distance to `OFFICE_LOCATION` via the **Haversine formula** and decides `inside`/`outside`.
+3. **Check In** calls `useAttendance().checkIn`, which:
+   - refuses if the user is outside the 100 m geofence or has already checked in today;
+   - builds an `AttendanceRecord` (`id`, `date`, `time`, `latitude`, `longitude`, `distance`) and saves it with `storage.service.ts`.
+4. **Attendance History** loads records from AsyncStorage, sorts them newest-first, and renders them with `FlatList`; a clear button removes everything.
+5. All state lives on-device, so the app works with no internet connection.
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+## Customization
 
-## Congratulations! :tada:
+- Change the office location and geofence radius in `src/constants/index.ts` (`OFFICE_LOCATION`, `GEOFENCE_RADIUS_METERS`).
 
-You've successfully run and modified your React Native App. :partying_face:
+## Troubleshooting
 
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+- **Blank map on Android** — your Google Maps API key is missing/invalid, or the **Maps SDK for Android** isn't enabled. Check `.env` and the Cloud Console.
+- **Location errors on simulator** — enable a simulated location in Android Studio's emulator (Extended Controls → Location) or Xcode Simulator (Features → Location).
+- **`pod install` fails** — run `bundle install` first, then `bundle exec pod install`.
