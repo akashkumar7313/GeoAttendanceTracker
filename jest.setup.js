@@ -1,9 +1,19 @@
 /* eslint-disable no-undef */
 
+jest.mock('react-native-config', () => {
+  return {
+    __esModule: true,
+    default: {
+      GOOGLE_MAPS_API_KEY: 'test-api-key',
+    },
+    GOOGLE_MAPS_API_KEY: 'test-api-key',
+  };
+});
+
 jest.mock('react-native-vector-icons/MaterialIcons', () => {
   const React = require('react');
   const { Text } = require('react-native');
-  const MockIcon = (props: Record<string, unknown>) =>
+  const MockIcon = props =>
     React.createElement(Text, props, '\uE900');
   return MockIcon;
 });
@@ -12,7 +22,7 @@ jest.mock('react-native-permissions', () => ({
   __esModule: true,
   check: jest.fn(async () => 'granted'),
   request: jest.fn(async () => 'granted'),
-  openSettings: jest.fn(async () => {}),
+  openSettings: jest.fn(async () => { }),
   PERMISSIONS: {
     IOS: { LOCATION_WHEN_IN_USE: 'ios.permission.LOCATION_WHEN_IN_USE' },
     ANDROID: { ACCESS_FINE_LOCATION: 'android.permission.ACCESS_FINE_LOCATION' },

@@ -9,7 +9,11 @@ import {
   MAP_DEFAULT_DELTA,
   OFFICE_LOCATION,
 } from '../constants';
-import { formatDistance, haversineDistance } from '../utils/geo';
+import {
+  formatDistance,
+  haversineDistance,
+  isInsideGeofence,
+} from '../utils/geo';
 
 interface AttendanceMapProps {
   /** The user's latest known location. `null` hides the user marker. */
@@ -216,14 +220,96 @@ export function AttendanceMap({
 
       {userLocation ? (
         <View style={styles.infoPill}>
-          <Text style={styles.infoPillText}>
-            You: {userLocation.latitude.toFixed(5)}, {userLocation.longitude.toFixed(5)}
-          </Text>
-          {officeLocation ? (
-            <Text style={styles.distanceText}>
-              Distance: {formatDistance(haversineDistance(userLocation, officeLocation))}
-            </Text>
-          ) : null}
+          <View style={styles.pillHeader}>
+            <View style={styles.coordRow}>
+              <Icon name="person-pin-circle" size={16} color={COLORS.success} />
+              <Text style={styles.coordText} numberOfLines={1}>
+                {userLocation.latitude.toFixed(5)}, {userLocation.longitude.toFixed(5)}
+              </Text>
+            </View>
+            {officeLocation
+              ? (() => {
+                const inside = isInsideGeofence(
+                  userLocation,
+                  officeLocation,
+                  radius,
+                );
+                return (
+                  <View
+                    style={[
+                      styles.statusChip,
+                      inside ? styles.statusChipIn : styles.statusChipOut,
+                    ]}
+                  >
+                    <Icon
+                      name={inside ? 'check-circle' : 'cancel'}
+                      size={14}
+                      color={inside ? COLORS.success : COLORS.danger}
+                    />
+                    <Text
+                      style={[
+                        styles.statusChipText,
+                        {
+                          color: inside ? COLORS.success : COLORS.danger,
+                        },
+                      ]}
+                    >
+                      {inside ? 'Inside' : 'Outside'}
+                    </Text>
+                  </View>
+                );
+              })()
+              : null}
+          </View>
+
+          {officeLocation
+            ? (() => {
+              const distance = haversineDistance(userLocation, officeLocation);
+              const inside = isInsideGeofence(
+                userLocation,
+                officeLocation,
+                radius,
+              );
+              const remaining = Math.max(0, distance - radius);
+              return (
+                <View style={styles.pillDetails}>
+                  <View style={styles.detailRow}>
+                    <Icon
+                      name="straighten"
+                      size={14}
+                      color={COLORS.textSecondary}
+                    />
+                    <Text style={styles.detailLabel}>Distance:</Text>
+                    <Text style={styles.detailValue}>
+                      {formatDistance(distance)}
+                    </Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Icon
+                      name={inside ? 'where-to-vote' : 'directions-walk'}
+                      size={14}
+                      color={inside ? COLORS.success : COLORS.warning}
+                    />
+                    <Text style={styles.detailLabel}>
+                      {inside ? 'You are in geofence' : 'Come closer by:'}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.detailValue,
+                        {
+                          color: inside ? COLORS.success : COLORS.warning,
+                        },
+                      ]}
+                    >
+                      {inside
+                        ? `✓ within ${radius}m`
+                        : formatDistance(remaining) + ' more'}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })()
+            : null}
         </View>
       ) : null}
     </View>
@@ -320,28 +406,74 @@ const styles = StyleSheet.create({
     bottom: 12,
     left: 12,
     right: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.97)',
+    padding: 14,
+    borderRadius: 16,
     shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.06)',
+    gap: 10,
   },
-  infoPillText: {
+  pillHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
+  },
+  coordRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+    minWidth: 0,
+  },
+  coordText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
     color: COLORS.text,
+    flexShrink: 1,
   },
-  distanceText: {
+  statusChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    marginLeft: 10,
+  },
+  statusChipIn: {
+    backgroundColor: 'rgba(22, 163, 74, 0.1)',
+  },
+  statusChipOut: {
+    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+  },
+  statusChipText: {
     fontSize: 12,
-    fontWeight: '500',
-    color: COLORS.primary,
-    marginTop: 2,
+    fontWeight: '700',
+  },
+  pillDetails: {
+    gap: 6,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  detailLabel: {
+    fontSize: 12.5,
+    color: COLORS.textSecondary,
+    flex: 1,
+  },
+  detailValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: COLORS.text,
   },
 });

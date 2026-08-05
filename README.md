@@ -1,153 +1,303 @@
-# Geolocation Tracking & Geofence-Based Attendance System
+# GeoAttendanceTracker
 
-A React Native (TypeScript) application that demonstrates **real-time GPS tracking**, a **circular geofence** around a fixed office location, and a **geofence-gated attendance check-in** system that works fully offline.
+`GeoAttendanceTracker` ek React Native CLI + TypeScript app hai jo live GPS location, office geofence aur attendance check-in flow ko combine karti hai. App ka main use-case hai: user apni current location dekhe, office location select ya persist kare, geofence ke andar aane par check-in kare, aur saari attendance history locally device par save ho.
 
-## Features
+Detailed project documentation, flow diagrams aur requirement analysis ke liye dekhein: `docs/PROJECT_REQUIREMENT_GUIDE.md`
 
-- **Real-time location tracking** — continuous GPS watch with live latitude/longitude display, cleaned up automatically on unmount.
-- **Map integration** — `react-native-maps` shows the office marker, the 100 m geofence circle and the user's position; the camera follows the user.
-- **Geofence** — Haversine distance calculation, `Inside Geofence` / `Outside Geofence` status badge.
-- **Check-in** — button enabled only inside the geofence, duplicate check-ins per day are blocked, success message on save.
-- **Local storage** — attendance records persisted with `@react-native-async-storage/async-storage` (works offline, no backend).
-- **Attendance History screen** — records shown newest-first in cards with an empty state and clear-history option.
-- **Error handling** — permission denied/blocked (deep-links to app settings), GPS disabled (alert + open settings + retry), timeouts, signal loss and unknown errors.
+## What This Project Does
+
+- Live user location track karta hai using `react-native-geolocation-service`
+- Office location ko search karke select karne deta hai via Google Places API
+- Office ke around circular geofence draw karta hai
+- User aur office distance calculate karta hai using Haversine formula
+- Sirf geofence ke andar attendance check-in allow karta hai
+- Ek din me duplicate check-in block karta hai
+- Attendance history ko local storage me persist karta hai
+- Android aur iOS dono par permission aur GPS state handle karta hai
+
+## Main Screens
+
+### Home
+
+- Office search input with live place suggestions
+- Selected office details card
+- Current latitude and longitude cards
+- Distance from office card
+- Map with office marker, user marker aur geofence circle
+- Map controls:
+  - current user location
+  - office location
+  - show both locations in the current map viewport
+  - zoom in / zoom out
+- Check-in button jo tabhi enable hota hai jab user geofence ke andar ho
+
+### Attendance History
+
+- Saved check-ins ki list, newest-first order me
+- Empty state jab koi record available na ho
+- Header action se full history clear karne ka option
+
+## Key Features
+
+- **Live GPS tracking**: initial location fetch ke baad continuous watch start hota hai
+- **Office search**: Google Places autocomplete aur place details se office coordinates milte hain
+- **Persistent office selection**: selected office AsyncStorage me save hota hai aur app restart ke baad restore hota hai
+- **Geofence status**: `inside`, `outside` aur `unknown` state derive hoti hai
+- **Offline attendance storage**: attendance history backend ke bina local device me save hoti hai
+- **Permission handling**: denied, blocked, GPS disabled aur generic error flows cover kiye gaye hain
+- **Map fit behavior**: office aur user dono ko current map size ke andar fit karke dikhaya ja sakta hai
 
 ## Tech Stack
 
 | Technology | Purpose |
 | --- | --- |
-| React Native CLI (0.86) + TypeScript | App framework |
-| React Navigation (native-stack) | Navigation |
-| `react-native-maps` | Google Maps (Android) / Apple Maps (iOS) |
-| `react-native-geolocation-service` | GPS tracking |
-| `react-native-permissions` | Location permission flow |
+| React Native CLI `0.86.2` | Mobile app framework |
+| React `19.2.3` | UI runtime |
+| TypeScript | Static typing |
+| React Navigation (`native-stack`) | App navigation |
+| `react-native-maps` | Map rendering |
+| `react-native-geolocation-service` | GPS location fetch and watch |
+| `react-native-permissions` | Runtime permission flow |
 | `@react-native-async-storage/async-storage` | Local persistence |
-| `react-native-vector-icons` | Icons |
-| `react-native-safe-area-context` | Safe areas |
-| `react-native-config` | `.env` config (Maps API key) |
+| `react-native-config` | `.env` based configuration |
+| `react-native-vector-icons` | Material icons |
+| `react-native-safe-area-context` | Safe area handling |
+| Jest | Unit tests |
+| ESLint | Linting |
 
-## Prerequisites
+## Requirements
 
-- Node.js ≥ 22
-- JDK 17+, Android Studio with Android SDK 36
-- Xcode 16+ (for iOS)
-- A Google Maps API key (Android). Create one in the [Google Cloud Console](https://console.cloud.google.com) with the **Maps SDK for Android** enabled, and restrict it to your app's package name `com.geoattendancetracker`.
+- Node.js `>= 22.11.0`
+- npm
+- JDK 17+
+- Android Studio with Android SDK
+- Xcode and CocoaPods for iOS
+- Google Maps / Places API key
 
-## Installation
+## Environment Setup
 
-```sh
-# 1. Install JS dependencies
-npm install
+Project root me `.env` file create karo:
 
-# 2. Create the environment file from the template
+```bash
 cp .env.example .env
 ```
 
-Edit `.env` and put your real Maps key:
+`.env` me apni API key set karo:
 
-```
+```env
 GOOGLE_MAPS_API_KEY=YOUR_GOOGLE_MAPS_API_KEY
 ```
 
-> The `.env` file is gitignored and must never be committed. Only `.env.example` (with a placeholder) is checked in.
+Recommended Google APIs:
 
-## Android configuration (already done, reference)
+- Maps SDK for Android
+- Places API
 
-- **Permissions** — `ACCESS_FINE_LOCATION` and `ACCESS_COARSE_LOCATION` are declared in `android/app/src/main/AndroidManifest.xml`.
-- **Maps key** — `android/app/build.gradle` reads `GOOGLE_MAPS_API_KEY` from `.env` via `react-native-config` and injects it as a manifest placeholder referenced in `AndroidManifest.xml` (`${GOOGLE_MAPS_API_KEY}`). No secret is stored in the repo.
-- **Icons** — `react-native-vector-icons/fonts.gradle` is applied in `android/app/build.gradle` (fonts are bundled automatically).
+Notes:
 
-## iOS configuration (already done, reference)
+- Android map rendering ke liye API key required hai
+- Office search ke liye Places API required hai
+- `.env` repo me commit nahi karna chahiye
 
-- **Location usage string** — `NSLocationWhenInUseUsageDescription` is set in `ios/GeoAttendanceTracker/Info.plist`.
-- **Maps** — iOS uses the default Apple Maps provider, so no Google API key is needed on iOS. (See below if you want Google Maps on iOS too.)
-- **Icons / native modules** — installed via CocoaPods (`pod install`).
+## Installation
 
-### Optional: Google Maps provider on iOS
-
-1. Add `GoogleMaps` to the podfile and `pod install`.
-2. Provide the API key in `AppDelegate.swift`:
-
-```swift
-import GoogleMaps
-GMSServices.provideAPIKey(ProcessInfo.processInfo.environment["GOOGLE_MAPS_API_KEY"] ?? "")
+```bash
+npm install
 ```
 
-3. Render the map with `provider={PROVIDER_GOOGLE}` in `src/components/AttendanceMap.tsx`.
+iOS ke liye:
 
-## Running the app
+```bash
+cd ios
+bundle install
+bundle exec pod install
+cd ..
+```
 
-```sh
-# iOS (after installing pods)
-cd ios && bundle exec pod install && cd ..
-npm run ios
+## Run The App
 
-# Android
-npm run android
+Metro start:
 
-# Start only the Metro bundler
+```bash
 npm start
 ```
 
-### Useful scripts
+Android:
 
-```sh
-npm run lint     # ESLint
-npm test         # Jest unit tests
-npx tsc --noEmit # TypeScript type-check
+```bash
+npm run android
 ```
 
-## Project structure
+iOS:
 
-```
-src/
-├── assets/                 # Static assets (placeholder)
-├── components/             # Reusable UI components
-│   ├── AttendanceCard.tsx      # Single history record card
-│   ├── AttendanceMap.tsx       # Map + geofence circle + markers
-│   ├── CheckInButton.tsx       # Primary check-in action
-│   ├── EmptyState.tsx          # Empty list placeholder
-│   ├── InfoCard.tsx            # Label/value card (lat, lng, distance)
-│   ├── MessageView.tsx         # Full-screen info/error state
-│   └── StatusBadge.tsx         # Inside/Outside geofence pill
-├── constants/
-│   └── index.ts            # Office location, radius, colors, keys
-├── hooks/
-│   ├── useAttendance.ts        # Check-in + history state
-│   └── useLocationTracking.ts  # Permission, GPS, watching lifecycle
-├── navigation/
-│   └── RootNavigator.tsx       # Stack navigator + types
-├── screens/
-│   ├── HomeScreen.tsx          # Tracking + map + check-in
-│   └── AttendanceHistoryScreen.tsx  # FlatList of records
-├── services/
-│   ├── location.service.ts     # getCurrentPosition / watchPosition
-│   ├── permission.service.ts   # Permission status, request, settings
-│   └── storage.service.ts      # AsyncStorage CRUD
-├── types/
-│   ├── index.ts                # Shared TypeScript types
-│   └── vector-icons.d.ts       # Icons module declaration
-└── utils/
-    ├── date.ts                 # Date/time formatting
-    └── geo.ts                  # Haversine + geofence helpers
+```bash
+npm run ios
 ```
 
-## How it works
+## Available Scripts
 
-1. **HomeScreen** mounts → `useLocationTracking` requests location permission (`react-native-permissions`), then starts a one-shot fix plus a `watchPosition` stream (`react-native-geolocation-service`).
-2. Every fix updates `location`, and `AttendanceMap` animates the camera to it. `utils/geo.ts` computes the distance to `OFFICE_LOCATION` via the **Haversine formula** and decides `inside`/`outside`.
-3. **Check In** calls `useAttendance().checkIn`, which:
-   - refuses if the user is outside the 100 m geofence or has already checked in today;
-   - builds an `AttendanceRecord` (`id`, `date`, `time`, `latitude`, `longitude`, `distance`) and saves it with `storage.service.ts`.
-4. **Attendance History** loads records from AsyncStorage, sorts them newest-first, and renders them with `FlatList`; a clear button removes everything.
-5. All state lives on-device, so the app works with no internet connection.
+```bash
+npm start
+npm run android
+npm run ios
+npm run lint
+npm test
+```
+
+TypeScript type-check ke liye:
+
+```bash
+npx tsc --noEmit
+```
+
+## Native Configuration Already Present
+
+### Android
+
+- `android/app/src/main/AndroidManifest.xml`
+  - `INTERNET`
+  - `ACCESS_COARSE_LOCATION`
+  - `ACCESS_FINE_LOCATION`
+  - `ACCESS_BACKGROUND_LOCATION`
+  - Google Maps API key meta-data
+- `android/app/build.gradle`
+  - `react-native-config` dotenv integration
+  - `GOOGLE_MAPS_API_KEY` manifest placeholder
+  - `react-native-vector-icons` fonts setup
+
+### iOS
+
+- `ios/GeoAttendanceTracker/Info.plist`
+  - `NSLocationWhenInUseUsageDescription` configured
+- `ios/Podfile`
+  - React Native pods setup available
+- Default map provider iOS par Apple Maps hai
+
+## Project Structure
+
+```text
+.
+├── __tests__/                     # Jest tests
+├── src/
+│   ├── assets/                    # Static assets placeholder
+│   ├── components/
+│   │   ├── AttendanceCard.tsx     # Single attendance history card
+│   │   ├── AttendanceMap.tsx      # Map, markers, circle and controls
+│   │   ├── CheckInButton.tsx      # Check-in CTA
+│   │   ├── EmptyState.tsx         # Empty list / no-data placeholder
+│   │   ├── InfoCard.tsx           # Reusable info display card
+│   │   ├── MessageView.tsx        # Permission / error / loading state screen
+│   │   ├── OfficeSearch.tsx       # Office place search UI
+│   │   └── StatusBadge.tsx        # Geofence status pill
+│   ├── constants/
+│   │   └── index.ts               # Colors, defaults, storage keys, routes
+│   ├── hooks/
+│   │   ├── useAttendance.ts       # Attendance state and actions
+│   │   ├── useLocationTracking.ts # Permission + GPS tracking lifecycle
+│   │   └── useOfficeLocation.ts   # Saved office location management
+│   ├── navigation/
+│   │   └── RootNavigator.tsx      # App stack navigator
+│   ├── screens/
+│   │   ├── AttendanceHistoryScreen.tsx
+│   │   └── HomeScreen.tsx
+│   ├── services/
+│   │   ├── geocode.service.ts     # Google Places autocomplete and details
+│   │   ├── location.service.ts    # Current position and watch helpers
+│   │   ├── office.service.ts      # Office location storage helpers
+│   │   ├── permission.service.ts  # Permission and settings helpers
+│   │   └── storage.service.ts     # Attendance storage helpers
+│   ├── types/
+│   │   ├── index.ts               # Shared app types
+│   │   └── vector-icons.d.ts      # Type declaration for icons
+│   └── utils/
+│       ├── date.ts                # Date/time helpers
+│       └── geo.ts                 # Distance and geofence helpers
+├── App.tsx                        # Navigation + safe area bootstrap
+├── package.json
+└── README.md
+```
+
+## App Flow
+
+1. App start hone par `RootNavigator` home screen render karta hai
+2. `useLocationTracking` permission check karta hai aur GPS tracking start karta hai
+3. `useOfficeLocation` saved office ko AsyncStorage se load karta hai, warna default office use hota hai
+4. User `OfficeSearch` se office search karke select kar sakta hai
+5. `AttendanceMap` office marker, user marker aur geofence circle render karta hai
+6. `utils/geo.ts` distance aur geofence state calculate karta hai
+7. User geofence ke andar hone par `Check In` enable hota hai
+8. Check-in success par record local storage me save hota hai
+9. `AttendanceHistoryScreen` saved records ko list me show karta hai
+
+## Data Persistence
+
+AsyncStorage me do primary data groups save hote hain:
+
+- `@geo_attendance/records`
+  - attendance records list
+- `@geo_attendance/office_location`
+  - selected office location
+
+Is wajah se:
+
+- Attendance history offline available rehti hai
+- Last selected office restart ke baad bhi restore ho jata hai
+
+## Testing
+
+Project me Jest tests available hain. Existing tests mostly app bootstrap, geo helpers aur storage-related logic cover karte hain.
+
+Run tests:
+
+```bash
+npm test
+```
 
 ## Customization
 
-- Change the office location and geofence radius in `src/constants/index.ts` (`OFFICE_LOCATION`, `GEOFENCE_RADIUS_METERS`).
+`src/constants/index.ts` me ye values update ki ja sakti hain:
+
+- `OFFICE_LOCATION`
+- `GEOFENCE_RADIUS_METERS`
+- `COLORS`
+- `SCREENS`
+
+## Limitations
+
+- Attendance storage local-only hai, koi backend sync nahi hai
+- Office search ke liye internet aur valid Places API key chahiye
+- iOS par Google Maps provider configure nahi kiya gaya; default Apple Maps use hota hai
+- Check-in model abhi single event per day hai, check-out flow nahi hai
 
 ## Troubleshooting
 
-- **Blank map on Android** — your Google Maps API key is missing/invalid, or the **Maps SDK for Android** isn't enabled. Check `.env` and the Cloud Console.
-- **Location errors on simulator** — enable a simulated location in Android Studio's emulator (Extended Controls → Location) or Xcode Simulator (Features → Location).
-- **`pod install` fails** — run `bundle install` first, then `bundle exec pod install`.
+- **Android map blank hai**
+  - `.env` me valid `GOOGLE_MAPS_API_KEY` verify karo
+  - Google Cloud me Maps SDK for Android enabled ho
+
+- **Office search result nahi aa rahe**
+  - Places API enabled hai ya nahi check karo
+  - Internet connectivity verify karo
+  - API key restrictions review karo
+
+- **Location permission denied aa raha hai**
+  - App settings open karke location permission allow karo
+
+- **GPS disabled state aa rahi hai**
+  - Device location services on karo
+  - Retry action se tracking restart karo
+
+- **iOS pods issue**
+  - `bundle install` ke baad `bundle exec pod install` chalao
+
+## Summary
+
+Ye project ek practical geofence attendance tracker hai jisme:
+
+- live location tracking
+- office place search
+- map-based visibility
+- geofence-gated check-in
+- local attendance history
+
+already integrated hai aur codebase clean module structure me organized hai.

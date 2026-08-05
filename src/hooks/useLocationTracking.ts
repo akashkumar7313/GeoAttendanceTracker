@@ -73,6 +73,11 @@ export function useLocationTracking(): UseLocationTracking {
           stopTracking();
           return;
         }
+        if (error.code === PositionError.POSITION_UNAVAILABLE) {
+          setStatus('gps_disabled');
+          setErrorMessage(getLocationErrorMessage(error.code));
+          return;
+        }
         setStatus('error');
         setErrorMessage(getLocationErrorMessage(error.code));
       },

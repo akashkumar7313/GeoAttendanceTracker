@@ -47,8 +47,12 @@ export function OfficeSearch({ onSelect, userLocation }: OfficeSearchProps) {
     setSearching(true);
     setError(null);
     debounceRef.current = setTimeout(async () => {
-      const places = await searchPlaces(trimmed, userLocation);
+      const { results: places, error: searchError } = await searchPlaces(
+        trimmed,
+        userLocation,
+      );
       setResults(places);
+      setError(searchError);
       setSearching(false);
     }, 400);
 
@@ -63,12 +67,17 @@ export function OfficeSearch({ onSelect, userLocation }: OfficeSearchProps) {
     setQuery('');
     setResults([]);
     Keyboard.dismiss();
-    const place = await getPlaceDetails(suggestion.placeId);
+    const { place, error: detailError } = await getPlaceDetails(
+      suggestion.placeId,
+    );
     if (place) {
       setError(null);
       onSelect(place);
     } else {
-      setError('Could not load coordinates for this place. Please try another.');
+      setError(
+        detailError ||
+          'Could not load coordinates for this place. Please try another.',
+      );
     }
   };
 

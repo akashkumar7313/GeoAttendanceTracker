@@ -197,6 +197,27 @@ export function HomeScreen() {
     );
   }
 
+  if (status === 'error') {
+    return (
+      <MessageView
+        icon="error-outline"
+        title="Location error"
+        message={errorMessage || 'There was a problem getting your location.'}
+        actions={[
+          {
+            label: 'Retry',
+            onPress: () => startTracking(),
+          },
+          {
+            label: 'Open Settings',
+            variant: 'secondary',
+            onPress: () => openAppSettings(),
+          },
+        ]}
+      />
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.topSection}>
@@ -214,15 +235,27 @@ export function HomeScreen() {
 
         <StatusBadge status={geofenceStatus} />
 
+        <View style={styles.infoRow}>
+          <InfoCard
+            icon="explore"
+            label="Latitude"
+            value={location ? location.latitude.toFixed(6) : '—'}
+            iconColor={COLORS.warning}
+          />
+          <InfoCard
+            icon="explore"
+            label="Longitude"
+            value={location ? location.longitude.toFixed(6) : '—'}
+            iconColor={COLORS.warning}
+          />
+        </View>
 
-
-
-        {status === 'error' && errorMessage ? (
-          <View style={styles.errorBanner}>
-            <Icon name="error-outline" size={16} color={COLORS.danger} />
-            <Text style={styles.errorText}>{errorMessage}</Text>
-          </View>
-        ) : null}
+        <InfoCard
+          icon="straighten"
+          label="Distance from Office"
+          value={distance !== null ? formatDistance(distance) : '—'}
+          iconColor={isInside ? COLORS.success : COLORS.warning}
+        />
       </View>
 
       <View style={styles.mapSection}>
@@ -264,20 +297,6 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     gap: 12,
-  },
-  errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#FEF2F2',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  errorText: {
-    flex: 1,
-    fontSize: 13,
-    color: COLORS.danger,
   },
   mapSection: {
     flex: 1,
