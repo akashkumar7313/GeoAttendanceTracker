@@ -214,24 +214,8 @@ export function HomeScreen() {
 
         <StatusBadge status={geofenceStatus} />
 
-        <View style={styles.infoRow}>
-          <InfoCard
-            icon="my-location"
-            label="Latitude"
-            value={location ? location.latitude.toFixed(6) : '--'}
-          />
-          <InfoCard
-            icon="public"
-            label="Longitude"
-            value={location ? location.longitude.toFixed(6) : '--'}
-          />
-        </View>
 
-        <InfoCard
-          icon="straighten"
-          label="Distance from office"
-          value={distance !== null ? formatDistance(distance) : '--'}
-        />
+
 
         {status === 'error' && errorMessage ? (
           <View style={styles.errorBanner}>
@@ -250,10 +234,12 @@ export function HomeScreen() {
 
       <View style={styles.bottomSection}>
         {location !== null && !isInside ? (
-          <Text style={styles.helperText}>
-            You must be within {GEOFENCE_RADIUS_METERS} m of the office to
-            check in.
-          </Text>
+          <View style={styles.warningBanner}>
+            <Icon name="info" size={20} color="#B26E00" />
+            <Text style={styles.warningText}>
+              You are currently outside the office zone. Please come within {GEOFENCE_RADIUS_METERS} meters of the office to check in.
+            </Text>
+          </View>
         ) : null}
         <CheckInButton
           onPress={onCheckIn}
@@ -300,10 +286,22 @@ const styles = StyleSheet.create({
     marginTop: 16,
     gap: 10,
   },
-  helperText: {
-    textAlign: 'center',
+  warningBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF4E5',
+    padding: 12,
+    borderRadius: 8,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#FFD8A8',
+  },
+  warningText: {
+    flex: 1,
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: '#B26E00',
+    fontWeight: '500',
+    lineHeight: 18,
   },
 });
 

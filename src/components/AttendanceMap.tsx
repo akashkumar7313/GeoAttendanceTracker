@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MapView, { Circle, Marker, Region } from 'react-native-maps';
 import { Coordinates } from '../types';
@@ -9,7 +9,7 @@ import {
   MAP_DEFAULT_DELTA,
   OFFICE_LOCATION,
 } from '../constants';
-import { haversineDistance } from '../utils/geo';
+import { formatDistance, haversineDistance } from '../utils/geo';
 
 interface AttendanceMapProps {
   /** The user's latest known location. `null` hides the user marker. */
@@ -139,6 +139,30 @@ export function AttendanceMap({
     }
   }, [officeLocation, userLocation]);
 
+  const centerOnUser = useCallback(() => {
+    if (userLocation) {
+      mapRef.current?.animateToRegion(
+        {
+          ...userLocation,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        },
+        500,
+      );
+    }
+  }, [userLocation]);
+
+  const centerOnOffice = useCallback(() => {
+    mapRef.current?.animateToRegion(
+      {
+        ...officeLocation,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      },
+      500,
+    );
+  }, [officeLocation]);
+
   return (
     <View style={[styles.container, height ? { height } : styles.flex]}>
       <MapView
@@ -165,6 +189,7 @@ export function AttendanceMap({
           title="Office"
           description={`Office location (${radius} m radius)`}
           anchor={{ x: 0.5, y: 0.5 }}
+          onPress={centerOnOffice}
         >
           <MapMarkerIcon icon="business" color={COLORS.primary} />
         </Marker>
@@ -174,6 +199,7 @@ export function AttendanceMap({
             title="You"
             description="Your current location"
             anchor={{ x: 0.5, y: 0.5 }}
+            onPress={centerOnUser}
           >
             <MapMarkerIcon icon="person" color={COLORS.success} />
           </Marker>
@@ -181,10 +207,25 @@ export function AttendanceMap({
       </MapView>
 
       <View style={styles.controls}>
-        <MapControl icon="my-location" onPress={locateMe} />
+        <MapControl icon="my-location" onPress={centerOnUser} />
+        <MapControl icon="business" onPress={centerOnOffice} />
+        <MapControl icon="layers" onPress={locateMe} />
         <MapControl icon="add" onPress={zoomIn} />
         <MapControl icon="remove" onPress={zoomOut} />
       </View>
+
+      {userLocation ? (
+        <View style={styles.infoPill}>
+          <Text style={styles.infoPillText}>
+            You: {userLocation.latitude.toFixed(5)}, {userLocation.longitude.toFixed(5)}
+          </Text>
+          {officeLocation ? (
+            <Text style={styles.distanceText}>
+              Distance: {formatDistance(haversineDistance(userLocation, officeLocation))}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -273,5 +314,34 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 4,
+  },
+  infoPill: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    right: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  infoPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  distanceText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: COLORS.primary,
+    marginTop: 2,
   },
 });
